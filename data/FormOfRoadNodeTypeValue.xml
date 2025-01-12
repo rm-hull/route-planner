@@ -1,0 +1,45 @@
+
+<?xml-stylesheet type='text/xsl' href='./CodelistDictionary-v32.xsl'?><Dictionary xmlns="http://www.opengis.net/gml/3.2" xmlns:gml="http://www.opengis.net/gml/3.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" gml:id="RoadClassificationValue" xsi:schemaLocation="http://www.opengis.net/gml/3.2 http://schemas.opengis.net/gml/3.2.1/gml.xsd">
+  <description>Functions of road nodes.</description>
+  <identifier codeSpace="http://www.os.uk/mastermap/highwayNetwork/1.0">FormOfRoadNodeTypeValue</identifier>
+  <dictionaryEntry>
+    <Definition gml:id="enclosed-traffic-area">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">enclosed traffic area</identifier>
+    </Definition>
+  </dictionaryEntry>
+  <dictionaryEntry>
+    <Definition gml:id="junction">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">junction</identifier>
+    </Definition>
+  </dictionaryEntry>
+  <dictionaryEntry>
+    <Definition gml:id="level-crossing">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">level crossing</identifier>
+    </Definition>
+  </dictionaryEntry>
+    <dictionaryEntry>
+    <Definition gml:id="pseudo-node">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">pseudo-node</identifier>
+    </Definition>
+  </dictionaryEntry>
+  <dictionaryEntry>
+    <Definition gml:id="road-end">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">road end</identifier>
+    </Definition>
+  </dictionaryEntry>
+  <dictionaryEntry>
+    <Definition gml:id="road-service-area">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">road service area</identifier>
+    </Definition>
+  </dictionaryEntry>
+  <dictionaryEntry>
+    <Definition gml:id="roundabout">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">roundabout</identifier>
+    </Definition>
+  </dictionaryEntry>
+  <dictionaryEntry>
+    <Definition gml:id="traffic-square">
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">traffic square</identifier>
+    </Definition>
+  </dictionaryEntry>
+</Dictionary>
