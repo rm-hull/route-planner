@@ -19,7 +19,7 @@
   </dictionaryEntry>
     <dictionaryEntry>
     <Definition gml:id="pseudo-node">
-      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">pseudo-node</identifier>
+      <identifier codeSpace="https://inspire.ec.europa.eu/codelist/FormOfRoadNodeValue">pseudo node</identifier>
     </Definition>
   </dictionaryEntry>
   <dictionaryEntry>
