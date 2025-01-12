@@ -1,0 +1,2 @@
+DROP TABLE road_links CASCADE;
+DROP TABLE road_nodes CASCADE;
