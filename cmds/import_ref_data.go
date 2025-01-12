@@ -7,13 +7,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"regexp"
 	"time"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/rm-hull/route-planner/db"
 	"github.com/rm-hull/route-planner/models"
+	"github.com/rm-hull/route-planner/repository"
 )
 
 func ImportRefData(tableName string, url string) error {
@@ -87,29 +85,11 @@ func insertIntoDb(tableName string, dict *models.Dictionary) error {
 	}
 	defer pool.Close()
 
-	sql := fmt.Sprintf(`
-		INSERT INTO "%s"."%s" (value, description) VALUES ($1, $2)
-		ON CONFLICT (value) DO UPDATE SET description = EXCLUDED.description
-	`, config.Schema, tableName)
-
-	batch := &pgx.Batch{}
-	re := regexp.MustCompile(`\s+`)
-
+	repo := repository.NewRefDataRepository(pool, tableName)
 	for _, entry := range dict.Entries {
-		var description *string = nil
-		if re.ReplaceAllString(entry.Definition.Description, "") != "" {
-			description = &entry.Definition.Description
-		}
-		batch.Queue(sql, entry.Definition.Identifier.Value, description)
-	}
-
-	results := pool.SendBatch(ctx, batch)
-	defer results.Close()
-
-	// Ensure all queries in the batch succeeded
-	for i := range batch.Len() {
-		if _, err := results.Exec(); err != nil {
-			return fmt.Errorf("batch insert failed at query %d: %v", i, err)
+		err := repo.Store(ctx, &models.RefData{Value: entry.Definition.Identifier.Value, Description: &entry.Definition.Description})
+		if err != nil {
+			return fmt.Errorf("failed to store record: %v", err)
 		}
 	}
 

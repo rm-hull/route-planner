@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/xml"
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -13,7 +12,7 @@ type FeatureCollection struct {
 	FeatureMembers []FeatureMember `xml:"featureMember"`
 }
 
-// Represents a single feature member (RoadLink or RoadNode)
+// Represents a single feature member (RoadLink, RoadNode, Motorway Junction)
 type FeatureMember struct {
 	XMLName          xml.Name          `xml:"featureMember"`
 	RoadLink         *RoadLink         `xml:"RoadLink,omitempty"`
@@ -37,8 +36,6 @@ type RoadLink struct {
 	Loop                     bool      `xml:"loop"`
 	PrimaryRoute             bool      `xml:"primaryRoute"`
 	TrunkRoad                bool      `xml:"trunkRoad"`
-	RoadNameTOID             *string   `xml:"roadNameTOID,omitempty"`
-	RoadNumberTOID           *string   `xml:"roadNumberTOID,omitempty"`
 }
 
 // RoadNode struct
@@ -56,37 +53,6 @@ type MotorwayJunction struct {
 	JunctionNumber string   `xml:"junctionNumber"`
 }
 
-type CoordinateProvider interface {
-	GetPosList() string
-	GetSRSDimension() int
-}
-
-func ParseCoordinates(provider CoordinateProvider) ([][]float64, error) {
-	// Split the space-separated string
-	parts := strings.Fields(provider.GetPosList())
-
-	// Validate that the length of parts is divisible by srsDimension
-	if len(parts)%provider.GetSRSDimension() != 0 {
-		return nil, fmt.Errorf("coordinates length (%d) is not divisible by srsDimension (%d)", len(parts), provider.GetSRSDimension())
-	}
-
-	// Convert to [][]float64
-	var coordinates [][]float64
-	for i := 0; i < len(parts); i += provider.GetSRSDimension() {
-		var tuple []float64
-		for j := 0; j < provider.GetSRSDimension(); j++ {
-			val, err := strconv.ParseFloat(parts[i+j], 64)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse coordinates: %w", err)
-			}
-			tuple = append(tuple, val)
-		}
-		coordinates = append(coordinates, tuple)
-	}
-
-	return coordinates, nil
-}
-
 // Geometry representation for LineString
 type Geometry struct {
 	ID           string `xml:"id,attr"`
@@ -95,12 +61,22 @@ type Geometry struct {
 	PosList      string `xml:"posList"`
 }
 
-func (g Geometry) GetPosList() string {
-	return g.PosList
-}
+func (g Geometry) AsLineString() string {
+	values := strings.Fields(g.PosList)
+	if len(values)%g.SRSDimension != 0 {
+		panic(fmt.Errorf("coordinates length (%d) is not divisible by srsDimension (%d)", len(values), g.SRSDimension))
+	}
 
-func (g Geometry) GetSRSDimension() int {
-	return g.SRSDimension
+	var coordinates []string
+	for i := 0; i < len(values); i += g.SRSDimension {
+		var tuple []string
+		for j := 0; j < g.SRSDimension; j++ {
+			tuple = append(tuple, values[i+j])
+		}
+		coordinates = append(coordinates, strings.Join(tuple, " "))
+	}
+
+	return "LINESTRING(" + strings.Join(coordinates, ",") + ")"
 }
 
 // Represents a point geometry
@@ -111,17 +87,21 @@ type Point struct {
 	Position     string `xml:"pos"`
 }
 
-func (p Point) GetPosList() string {
-	return p.Position
-}
-
-func (p Point) GetSRSDimension() int {
-	return p.SRSDimension
+func (p Point) AsPoint() any {
+	var sb strings.Builder
+	sb.WriteString("POINT(")
+	sb.WriteString(p.Position)
+	sb.WriteString(")")
+	return sb.String()
 }
 
 // Reference to a start or end node
 type NodeRef struct {
 	Href string `xml:"href,attr"`
+}
+
+func (node *NodeRef) Ref() string {
+	return strings.TrimPrefix(node.Href, "#")
 }
 
 // Represents a classification or function code with a codeSpace attribute
@@ -134,4 +114,11 @@ type CodeValue struct {
 type Length struct {
 	Unit  string  `xml:"uom,attr"`
 	Value float64 `xml:",chardata"`
+}
+
+func (l Length) ConvertTo(newUnit string) float64 {
+	if l.Unit == newUnit {
+		return l.Value
+	}
+	panic("unimplemented")
 }

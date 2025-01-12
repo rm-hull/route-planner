@@ -2,6 +2,6 @@ package models
 
 type RefData struct {
 	ID          int32
-	Code        string
+	Value       string
 	Description *string
 }

@@ -27,7 +27,9 @@ func main() {
 		Short: "Import GML data from specified path",
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			cmds.ImportGmlData(args[0])
+			if err := cmds.ImportGmlData(args[0]); err != nil {
+				log.Fatalf("failed to import GML: %v", err)
+			}
 		},
 	}
 
