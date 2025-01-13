@@ -101,7 +101,7 @@ type NodeRef struct {
 }
 
 func (node *NodeRef) Ref() string {
-	return strings.TrimPrefix(node.Href, "#")
+	return node.Href[1:]
 }
 
 // Represents a classification or function code with a codeSpace attribute
