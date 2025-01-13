@@ -14,6 +14,7 @@ import (
 )
 
 const BATCH_SIZE = 1000
+const ESTIMATED_TOTAL_RECORDS = 14_472_914
 
 func ImportGmlData(path string) error {
 	config := db.ConfigFromEnv()
@@ -45,7 +46,13 @@ func ImportGmlData(path string) error {
 	roadNodes := make([]models.RoadNode, 0)
 	motorwayJunctions := make([]models.MotorwayJunction, 0)
 
-	for _, filePath := range files {
+	bar := progressbar.Default(ESTIMATED_TOTAL_RECORDS)
+	updateProgressBarSummary := func(count int, filePath string) {
+		bar.Describe(fmt.Sprintf("importing GML: (%02d/%02d) %s", count + 1, len(files), filePath))
+	}
+
+	for i, filePath := range files {
+		updateProgressBarSummary(i, filePath)
 
 		file, err := os.Open(filePath)
 		if err != nil {
@@ -55,7 +62,6 @@ func ImportGmlData(path string) error {
 
 		decoder := xml.NewDecoder(file)
 
-		bar := progressbar.Default(-1, fmt.Sprintf("importing GML: %s", filePath))
 		for {
 			bar.Add(1)
 			token, err := decoder.Token()
@@ -108,9 +114,9 @@ func ImportGmlData(path string) error {
 				motorwayJunctions = make([]models.MotorwayJunction, 0)
 			}
 		}
-		bar.Finish()
-
 	}
+
+	bar.Finish()
 
 	err = repo.StoreRoadLinks(ctx, roadLinks...)
 	if err != nil {
