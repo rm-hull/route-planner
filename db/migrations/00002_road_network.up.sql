@@ -1,5 +1,6 @@
 CREATE TABLE road_nodes (
-    id TEXT PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
+    gml_id TEXT NOT NULL UNIQUE,
     location GEOMETRY(POINT, 4326) NOT NULL, -- WSG84 SRID
     form_of_road_id INT NOT NULL REFERENCES form_of_road_types(id)
 );
@@ -7,10 +8,13 @@ CREATE TABLE road_nodes (
 CREATE INDEX idx_road_nodes_geolocation ON road_nodes USING GIST (location);
 
 CREATE TABLE road_links (
-    id TEXT PRIMARY KEY,
+    id BIGINT PRIMARY KEY,
+    source_id BIGINT NOT NULL REFERENCES road_nodes(id),
+    target_id BIGINT NOT NULL REFERENCES road_nodes(id),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    start_node_id TEXT NOT NULL REFERENCES road_nodes(id),
-    end_node_id TEXT NOT NULL REFERENCES road_nodes(id),
+    gml_id TEXT NOT NULL UNIQUE,
+    start_node_id TEXT NOT NULL REFERENCES road_nodes(gml_id),
+    end_node_id TEXT NOT NULL REFERENCES road_nodes(gml_id),
     road_classification_id INT NOT NULL REFERENCES road_classifications(id),
     road_function_id INT NOT NULL REFERENCES road_functions(id),
     form_of_way_id INT NOT NULL REFERENCES form_of_way_types(id),

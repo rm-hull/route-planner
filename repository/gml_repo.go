@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rm-hull/route-planner/models"
+	"github.com/spaolacci/murmur3"
 )
 
 type GmlRepository interface {
@@ -55,19 +56,33 @@ func NewGmlRepository(pool *pgxpool.Pool) (*GmlRepositoryImpl, error) {
 }
 
 func (repo *GmlRepositoryImpl) DisableTriggers(ctx context.Context) error {
-	_, err := repo.pool.Exec(ctx, `ALTER TABLE road_links DISABLE TRIGGER ALL`)
-	return err
+	if _, err := repo.pool.Exec(ctx, `ALTER TABLE road_links DISABLE TRIGGER ALL`); err != nil {
+		return err
+	}
+	if _, err := repo.pool.Exec(ctx, `ALTER TABLE road_nodes DISABLE TRIGGER ALL`); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (repo *GmlRepositoryImpl) EnableTriggers(ctx context.Context) error {
-	_, err := repo.pool.Exec(ctx, `ALTER TABLE road_links ENABLE TRIGGER ALL`)
-	return err
+	if _, err := repo.pool.Exec(ctx, `ALTER TABLE road_links ENABLE TRIGGER ALL`); err != nil {
+		return err
+	}
+	if _, err := repo.pool.Exec(ctx, `ALTER TABLE road_nodes ENABLE TRIGGER ALL`); err != nil {
+		return err
+	}
+	return nil
+}
+
+func hash(id string) int64 {
+	return int64(murmur3.Sum64([]byte(id[2:])))
 }
 
 func (repo *GmlRepositoryImpl) StoreRoadNodes(ctx context.Context, roadNodes ...models.RoadNode) error {
 	sql := `
-		INSERT INTO road_nodes (id, location, form_of_road_id)
-		VALUES ($1, ST_Transform(ST_SetSRID(ST_GeomFromText($2), 27700), 4326), $3)
+		INSERT INTO road_nodes (id, gml_id, location, form_of_road_id)
+		VALUES ($1, $2, ST_Transform(ST_SetSRID(ST_GeomFromText($3), 27700), 4326), $4)
 		ON CONFLICT (id) DO UPDATE SET
 			location = EXCLUDED.location, form_of_road_id = EXCLUDED.form_of_road_id;
 	`
@@ -76,6 +91,7 @@ func (repo *GmlRepositoryImpl) StoreRoadNodes(ctx context.Context, roadNodes ...
 
 	for _, roadNode := range roadNodes {
 		batch.Queue(sql,
+			hash(roadNode.ID),
 			roadNode.ID,
 			roadNode.Geometry.AsPoint(),
 			repo.formOfRoadTypes[roadNode.FormOfRoadNode.Value].ID,
@@ -88,7 +104,7 @@ func (repo *GmlRepositoryImpl) StoreRoadNodes(ctx context.Context, roadNodes ...
 	// Ensure all queries in the batch succeed
 	for i := range batch.Len() {
 		if _, err := results.Exec(); err != nil {
-			return fmt.Errorf("batch insert failed at query %d: %v", i, err)
+			return fmt.Errorf("batch insert on road_nodes failed at query %d (gml:id=%s): %v", i, roadNodes[i].ID, err)
 		}
 	}
 
@@ -98,13 +114,14 @@ func (repo *GmlRepositoryImpl) StoreRoadNodes(ctx context.Context, roadNodes ...
 func (repo *GmlRepositoryImpl) StoreRoadLinks(ctx context.Context, roadLinks ...models.RoadLink) error {
 	sql := `
 		INSERT INTO road_links (
-			id, center_line, start_node_id, end_node_id, road_classification_id, road_function_id,
+			id, source_id, target_id, gml_id, center_line, start_node_id, end_node_id, road_classification_id, road_function_id,
 			form_of_way_id, road_classification_number, name1, length_m, loop, primary_route, trunk_road)
 		VALUES (
-			$1, ST_Transform(ST_SetSRID(ST_GeomFromText($2), 27700), 4326), $3, $4, $5, $6,
-			$7, $8, $9, $10, $11, $12, $13
+			$1, $2, $3, $4, ST_Transform(ST_SetSRID(ST_GeomFromText($5), 27700), 4326), $6, $7, $8, $9,
+			$10, $11, $12, $13, $14, $15, $16
 		)
 		ON CONFLICT (id) DO UPDATE SET
+			source_id = EXCLUDED.source_id, target_id = EXCLUDED.target_id, gml_id = EXCLUDED.gml_id,
 			center_line = EXCLUDED.center_line, start_node_id = EXCLUDED.start_node_id, end_node_id = EXCLUDED.end_node_id,
 			road_classification_id = EXCLUDED.road_classification_id, road_function_id = EXCLUDED.road_function_id,
 			form_of_way_id = EXCLUDED.form_of_way_id, road_classification_number = EXCLUDED.road_classification_number,
@@ -115,7 +132,11 @@ func (repo *GmlRepositoryImpl) StoreRoadLinks(ctx context.Context, roadLinks ...
 	batch := &pgx.Batch{}
 
 	for _, roadLink := range roadLinks {
+
 		batch.Queue(sql,
+			hash(roadLink.ID),
+			hash(roadLink.StartNode.Ref()),
+			hash(roadLink.EndNode.Ref()),
 			roadLink.ID,
 			roadLink.CentrelineGeometry.AsLineString(),
 			roadLink.StartNode.Ref(),
@@ -138,7 +159,7 @@ func (repo *GmlRepositoryImpl) StoreRoadLinks(ctx context.Context, roadLinks ...
 	// Ensure all queries in the batch succeed
 	for i := range batch.Len() {
 		if _, err := results.Exec(); err != nil {
-			return fmt.Errorf("batch insert failed at query %d: %v", i, err)
+			return fmt.Errorf("batch insert on road_links failed at query %d (gml:id=%s): %v", i, roadLinks[i].ID, err)
 		}
 	}
 

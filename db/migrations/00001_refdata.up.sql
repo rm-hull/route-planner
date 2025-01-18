@@ -1,4 +1,5 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
+CREATE EXTENSION IF NOT EXISTS pgrouting;
 
 CREATE TABLE road_classifications (
     id SERIAL PRIMARY KEY,
